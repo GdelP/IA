@@ -11,3 +11,7 @@
 *.lai
 *.la
 *.a
+/src/Release_Efficient
+/src/Debug
+*.hpp~
+*.cpp~
