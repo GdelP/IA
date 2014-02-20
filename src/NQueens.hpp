@@ -4,32 +4,80 @@
 #include <algorithm>
 #include <assert.h>
 #include <cmath>
+#include <array>
 
 namespace NQueens {
+	typedef unsigned char Precision;
   struct Queen {
 	  Queen() : mX(0), mY(0) {}
-	  Queen(unsigned int const x, unsigned int const y) : mX(x), mY(y) {}
-	  ~Queen() {
-		  //std::cout << "Queen destroyed" << std::endl;
-	  }
+	  Queen(Precision const x, Precision const y) : mX(x), mY(y) {}
     bool Kills(Queen const& other) const {
-      return mX==other.mX || mY==other.mY || (std::abs(mX-other.mX)==std::abs(mY-other.mY)); }
+      return mX==other.mX ||
+			 mY==other.mY ||
+			 (std::abs(int(mX)-int(other.mX))==std::abs(int(mY)-int(other.mY))); }
     friend std::ostream& operator<<(std::ostream& out, Queen const& state) {
-		out << "[" << state.mX << "," << state.mY << "]";
+		out << "[" << int(state.mX) << "," << int(state.mY) << "]";
 		return out;
 	}
 	
 	bool operator==(Queen const& other) const {
 		return mX==other.mX && mY==other.mY; }
+	
+	inline Precision const& X() const { return mX;}
+	inline Precision const& Y() const { return mY;}
   protected:
-    int mX, mY;
+    Precision mX;
+	Precision mY;
   };
+  ///Deprecated
+  template<int N>
+  struct StateMatrix {
+	  StateMatrix() : mQueens() {
+	  }
+	  StateMatrix(StateMatrix<N>&& ot) : mQueens(std::move(ot.mQueens)) {}
+	  ~StateMatrix() {
+		  std::cout << "StateMatrix destroyed" << std::endl;
+	  }
+	void insert(Queen const& other) {
+		Precision const xOr = other.X();
+		Precision const yOr = other.Y();
+		for(Precision x=0; x<N; ++x) {
+			mQueens[x][yOr]++;
+			for(Precision y=0; y<N; ++y) {
+
+			}
+		}
+		for(Precision y=0; y<N; ++y)
+			mQueens[xOr][y]++;
+	}
+    bool Kills(Queen const& other) const {
+	}
+    friend std::ostream& operator<<(std::ostream& out, StateMatrix<N> const& state) {
+      out << "{";
+      for(Queen const& q: state.mQueens)
+	out << q << ", ";
+      return out << "}";
+    }
+
+	bool has(Queen const& ot) const {
+	}
+	bool operator==(StateMatrix<N> const& other) const {
+	}
+	bool empty() const {  }
+  protected:
+    std::array<std::array<Precision,N>,N> mQueens;
+  };
+
 
   template<int N>
   struct State {
 	  State() {
+		  mQueens.reserve(N);
 	  }
 	  State(State<N> const& ot) : mQueens(ot.mQueens) {}
+	  State(State<N> const& ot, Queen const& q) : mQueens(ot.mQueens) {
+		  mQueens.push_back(q);
+	  }
 	  State(State<N>&& ot) : mQueens(std::move(ot.mQueens)) {}
 	  ~State() {
 		  //std::cout << "State destroyed" << std::endl;
@@ -48,7 +96,6 @@ namespace NQueens {
 		mQueens.push_back(other);
 	}
     bool Kills(Queen const& other) const {
-		assert(this);
 		return std::any_of(this->mQueens.cbegin(), this->mQueens.cend(), [&other](Queen const& q) {
 			return q.Kills(other); });
 	}
@@ -75,6 +122,15 @@ namespace NQueens {
 		}
 		return eq;
 	}
+	bool empty() const { return mQueens.empty(); }
+	Precision LastXOccupied() const {
+		//if(mQueens.empty()) return -1;
+		return mQueens.back().X();
+	}
+	Precision LastYOccupied() const {
+		//if(mQueens.empty()) return -1;
+		return mQueens.back().Y();
+	}
   protected:
     std::vector<Queen> mQueens;
   };
@@ -82,17 +138,21 @@ namespace NQueens {
   template<int N>
   struct Operator_PutOne {
     void operator()(State<N> const& initialState, std::vector<State<N>>& stateVector) {
-      for(unsigned int x=0; x<N; ++x) {
-	for(unsigned int y=0; y<N; ++y) {
-	  Queen candidate(x,y);
-	  bool killed = initialState.Kills(candidate);
-	  if(!killed) {
-	    State<N> newState(initialState);
-	    newState.insert(candidate);
-	    stateVector.push_back(newState);
-	  }
-	}
-      }
+		int const x = (initialState.empty()) ? 0 : (initialState.LastXOccupied()+1);
+		int const oldY = (initialState.empty()) ? 0 : (initialState.LastYOccupied());
+		int const initialY = (oldY +1)%N;
+		int const lastY = (oldY==-1) ? 0 : oldY;
+		int y = initialY;
+		do {
+			Queen const candidate(x,y);
+			bool const killed = initialState.Kills(candidate);
+			if(!killed) {
+				State<N> newState(initialState);
+				newState.insert(candidate);
+				stateVector.push_back(newState);
+			}
+			y = (y+1)%N;
+		} while(y!=lastY);
     }
   };
 
@@ -113,8 +173,6 @@ namespace NQueens {
 			  //sons.erase(std::remove(sons.begin(), sons.end(), st), sons.end());
 		  }
 	//Do nothing
-      }, [](State<N> const& aState) -> bool {
-		  return aState.IsSolution();
       });
   };
 }

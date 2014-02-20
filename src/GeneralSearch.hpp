@@ -4,13 +4,11 @@
 #include <vector>
 #include <ctime>
 
-template<typename State, typename GenerateSuccesorsT, typename SolveRepeatedElementsT, typename IsSolutionT>
+template<typename State, typename GenerateSuccesorsT, typename SolveRepeatedElementsT>
 State GeneralSearch_ForOneSoution(State& initialState,
 				  GenerateSuccesorsT const& GenerateSuccesors,
-				  SolveRepeatedElementsT const& SolveRepeatedElements,
-				  IsSolutionT const& IsSolution) //throw std::logic_error
+				  SolveRepeatedElementsT const& SolveRepeatedElements) //throw std::logic_error
 {
-  clock_t const aTime = clock();
   std::vector<State> aOpenStates, aClosedStates;
   aOpenStates.reserve(10000);
   aClosedStates.reserve(10000);
@@ -23,11 +21,9 @@ State GeneralSearch_ForOneSoution(State& initialState,
     std::vector<State> sons = GenerateSuccesors(aActual);
     SolveRepeatedElements(sons, aOpenStates, aClosedStates);
     aOpenStates.insert(aOpenStates.end(), sons.begin(), sons.end());
-  } while(!IsSolution(aActual) && !aOpenStates.empty());
-  if(!IsSolution(aActual)) {
+  } while(!aActual.IsSolution() && !aOpenStates.empty());
+  if(!aActual.IsSolution()) {
     throw std::logic_error("GeneralSearch has been unable to find a solution.");
   }
-  clock_t const aTimeEnd = clock();
-  std::cout << "Timing: " << float(aTimeEnd-aTime)/CLOCKS_PER_SEC << std::endl;
   return aActual;
 }
